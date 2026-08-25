@@ -89,7 +89,9 @@ npx skills ls -g -a cursor
 - 数据库迁移（部署）：`npm run db:deploy`
 - Prisma client 生成：`npm run db:generate`
 - 基础设施：`docker compose up -d` / `docker compose down`
-- 提交前必跑：`npm run format:check && npm run lint && npm run typecheck && npm test`
+- 数据库连通探测：`npm run db:ping`（`npm run dev` 经 `predev` 自动执行）
+- 提交前必跑：`npm run verify`（format + lint + typecheck + test，不连库）
+- 提交前完整门禁：`npm run verify:full`（verify + db:ping + build，需 Docker MySQL 已启动）
 
 ## 架构约束
 

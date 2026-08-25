@@ -18,7 +18,10 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "npx tsx prisma/seed.ts",
-    "verify": "npm run format:check && npm run lint && npm run typecheck && npm test"
+    "db:ping": "npx tsx scripts/db-ping.ts",
+    "predev": "npm run db:ping",
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm test",
+    "verify:full": "npm run verify && npm run db:ping && npm run build"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
