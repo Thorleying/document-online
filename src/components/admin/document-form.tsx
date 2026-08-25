@@ -2,6 +2,10 @@
 
 import { useActionState } from "react";
 import { DocumentStatus, DocumentVisibility } from "@/generated/prisma/enums";
+import {
+  DOCUMENT_STATUS_LABELS,
+  DOCUMENT_VISIBILITY_LABELS,
+} from "@/lib/document-labels";
 import type { DocumentEditorDto } from "@/server/documents/dto";
 import type { DocumentFormState } from "@/server/documents/actions";
 
@@ -60,7 +64,7 @@ function DocumentMetaFields({ initial, errors }: FieldsProps) {
         >
           {Object.values(DocumentStatus).map((s) => (
             <option key={s} value={s}>
-              {s}
+              {DOCUMENT_STATUS_LABELS[s]}
             </option>
           ))}
         </select>
@@ -81,7 +85,7 @@ function DocumentMetaFields({ initial, errors }: FieldsProps) {
         >
           {Object.values(DocumentVisibility).map((v) => (
             <option key={v} value={v}>
-              {v}
+              {DOCUMENT_VISIBILITY_LABELS[v]}
             </option>
           ))}
         </select>
@@ -96,7 +100,7 @@ function DocumentMetaFields({ initial, errors }: FieldsProps) {
           className="border-border text-accent focus:ring-accent h-4 w-4 rounded"
         />
         <label htmlFor="allowIndex" className="text-muted-foreground text-sm">
-          允许搜索引擎索引（仅 PUBLIC + 已发布生效）
+          允许搜索引擎索引（仅公开且已发布时生效）
         </label>
       </div>
     </div>
