@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ReaderShell } from "@/components/reader/reader-shell";
+import { ViewTracker } from "@/components/reader/view-tracker";
 import {
   assertPublicDocument,
   getPublicDocumentBySlug,
@@ -36,6 +37,7 @@ export default async function DocumentReaderPage({
       viewCount={doc.viewCount}
       publishedLabel="公开文档"
     >
+      <ViewTracker slug={doc.slug} />
       <div dangerouslySetInnerHTML={{ __html: doc.contentHtml }} />
     </ReaderShell>
   );
