@@ -29,6 +29,10 @@ export const config = {
   sessionCookieName: "session" as const,
   /** 会话有效期（秒）。 */
   sessionMaxAgeSec: 7 * 24 * 60 * 60,
+  /** 分享链接密码验证通过后的访问凭证 Cookie 名前缀。 */
+  shareAccessCookiePrefix: "share_access_" as const,
+  /** 分享链接密码验证凭证有效期（秒），到期需重新输入密码。 */
+  shareAccessMaxAgeSec: 24 * 60 * 60,
 } as const;
 
 export type AppConfig = typeof config;
