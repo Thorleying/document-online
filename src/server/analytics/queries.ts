@@ -1,17 +1,39 @@
 import "server-only";
 
 import { prisma } from "@/server/db/client";
+import { PERMANENT_ENTRY_SHARE_LINK_ID } from "@/server/analytics/constants";
 import { getTrendStart, toStatDate } from "@/server/analytics/dates";
 import {
+  type ChannelStat,
   type DailyTrendPoint,
+  type DocumentChannelStats,
   type RecentViewItem,
   type RefererStat,
 } from "@/server/analytics/dto";
 import { refererSource } from "@/server/analytics/normalize";
 
+type PvUv = { pv: number; uv: number };
+
 /** 将 stat_date（UTC 零点）格式化为 YYYY-MM-DD。 */
 function formatStatDate(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+/** 从 startDay 起连续 days 天生成补零后的日趋势序列。 */
+function fillDailyTrend(
+  byDate: Map<string, PvUv>,
+  startDay: Date,
+  days: number,
+): DailyTrendPoint[] {
+  const points: DailyTrendPoint[] = [];
+  for (let i = 0; i < Math.max(1, days); i += 1) {
+    const day = new Date(startDay);
+    day.setDate(day.getDate() + i);
+    const key = formatStatDate(toStatDate(day));
+    const sums = byDate.get(key);
+    points.push({ date: key, pv: sums?.pv ?? 0, uv: sums?.uv ?? 0 });
+  }
+  return points;
 }
 
 /**
@@ -38,15 +60,82 @@ export async function getDailyTrend(days: number): Promise<DailyTrendPoint[]> {
     ]),
   );
 
-  const points: DailyTrendPoint[] = [];
-  for (let i = 0; i < Math.max(1, days); i += 1) {
-    const day = new Date(startDay);
-    day.setDate(day.getDate() + i);
-    const key = formatStatDate(toStatDate(day));
-    const sums = byDate.get(key);
-    points.push({ date: key, pv: sums?.pv ?? 0, uv: sums?.uv ?? 0 });
+  return fillDailyTrend(byDate, startDay, days);
+}
+
+/** 将各渠道的 PV/UV 合计关联 share_links 的备注与 token，按 PV 降序。 */
+async function toChannelStats(
+  byChannel: Map<bigint, PvUv>,
+): Promise<ChannelStat[]> {
+  const shareIds = [...byChannel.keys()].filter(
+    (id) => id !== PERMANENT_ENTRY_SHARE_LINK_ID,
+  );
+  const links =
+    shareIds.length > 0
+      ? await prisma.shareLink.findMany({
+          where: { id: { in: shareIds } },
+          select: { id: true, remark: true, token: true },
+        })
+      : [];
+  const linkById = new Map(links.map((link) => [link.id, link]));
+
+  return [...byChannel.entries()]
+    .map(([shareLinkId, sums]): ChannelStat => {
+      const link = linkById.get(shareLinkId);
+      return {
+        shareLinkId: shareLinkId.toString(),
+        entry:
+          shareLinkId === PERMANENT_ENTRY_SHARE_LINK_ID ? "permanent" : "share",
+        remark: link?.remark ?? null,
+        token: link?.token ?? null,
+        pv: sums.pv,
+        uv: sums.uv,
+      };
+    })
+    .sort((a, b) => b.pv - a.pv || b.uv - a.uv);
+}
+
+/**
+ * 单文档近 N 天的分渠道统计：整体日 PV/UV 趋势（补零）与各入口
+ * （永久链接 / 各分享链接）在窗口内的 PV/UV 汇总。
+ *
+ * 数据来自 doc_daily_stats 预聚合表，share_link_id 用
+ * PERMANENT_ENTRY_SHARE_LINK_ID（0）表示永久链接入口；分享链接的备注与
+ * token 关联 share_links 获取，链接已被删除时二者为 null。
+ *
+ * @param documentId - 文档 ID
+ * @param days - 窗口天数（含今天）
+ */
+export async function getDocumentChannelStats(
+  documentId: bigint,
+  days: number,
+): Promise<DocumentChannelStats> {
+  const startDay = getTrendStart(new Date(), days);
+
+  const rows = await prisma.docDailyStat.findMany({
+    where: { documentId, statDate: { gte: toStatDate(startDay) } },
+    select: { shareLinkId: true, statDate: true, pv: true, uv: true },
+  });
+
+  const byDate = new Map<string, PvUv>();
+  const byChannel = new Map<bigint, PvUv>();
+  for (const row of rows) {
+    const dateKey = formatStatDate(row.statDate);
+    const daySums = byDate.get(dateKey) ?? { pv: 0, uv: 0 };
+    daySums.pv += row.pv;
+    daySums.uv += row.uv;
+    byDate.set(dateKey, daySums);
+
+    const channelSums = byChannel.get(row.shareLinkId) ?? { pv: 0, uv: 0 };
+    channelSums.pv += row.pv;
+    channelSums.uv += row.uv;
+    byChannel.set(row.shareLinkId, channelSums);
   }
-  return points;
+
+  return {
+    trend: fillDailyTrend(byDate, startDay, days),
+    channels: await toChannelStats(byChannel),
+  };
 }
 
 /**

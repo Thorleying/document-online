@@ -2,18 +2,9 @@ import Link from "next/link";
 import { Eye, FileText, FilePenLine, TrendingUp } from "lucide-react";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { StatCard } from "@/components/admin/stat-card";
-import { DocumentStatus } from "@/generated/prisma/client";
+import { DOCUMENT_STATUS_LABELS } from "@/lib/document-labels";
 import { listDocuments } from "@/server/documents/service";
 import { getAdminDashboardStats } from "@/server/documents/stats";
-
-function statusLabel(status: DocumentStatus) {
-  const map: Record<DocumentStatus, string> = {
-    DRAFT: "草稿",
-    PUBLISHED: "已发布",
-    ARCHIVED: "已归档",
-  };
-  return map[status];
-}
 
 export default async function AdminDashboardPage() {
   const [stats, documents] = await Promise.all([
@@ -97,7 +88,7 @@ export default async function AdminDashboardPage() {
                         </div>
                       </td>
                       <td className="text-muted-foreground px-4 py-3">
-                        {statusLabel(doc.status)}
+                        {DOCUMENT_STATUS_LABELS[doc.status]}
                       </td>
                       <td className="text-muted-foreground hidden px-4 py-3 tabular-nums sm:table-cell">
                         {doc.viewCount}

@@ -3,27 +3,19 @@ import { Eye } from "lucide-react";
 import { deleteDocumentAction } from "@/server/documents/actions";
 import type { DocumentListItemDto } from "@/server/documents/dto";
 import { DocumentStatus, DocumentVisibility } from "@/generated/prisma/client";
+import {
+  DOCUMENT_STATUS_LABELS,
+  DOCUMENT_VISIBILITY_LABELS,
+} from "@/lib/document-labels";
 
 function statusBadge(status: DocumentStatus) {
   const map: Record<DocumentStatus, string> = {
-    DRAFT: "bg-amber-50 text-amber-800 ring-amber-200",
-    PUBLISHED: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-    ARCHIVED: "bg-muted text-muted-foreground ring-border",
+    [DocumentStatus.DRAFT]: "bg-amber-50 text-amber-800 ring-amber-200",
+    [DocumentStatus.PUBLISHED]:
+      "bg-emerald-50 text-emerald-800 ring-emerald-200",
+    [DocumentStatus.ARCHIVED]: "bg-muted text-muted-foreground ring-border",
   };
   return map[status];
-}
-
-function statusLabel(status: DocumentStatus) {
-  const map: Record<DocumentStatus, string> = {
-    DRAFT: "草稿",
-    PUBLISHED: "已发布",
-    ARCHIVED: "已归档",
-  };
-  return map[status];
-}
-
-function visibilityLabel(v: DocumentVisibility) {
-  return v === DocumentVisibility.PUBLIC ? "公开" : "私有";
 }
 
 type DocumentsTableProps = {
@@ -65,7 +57,7 @@ export function DocumentsTable({ documents }: DocumentsTableProps) {
                   <span
                     className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${statusBadge(doc.status)}`}
                   >
-                    {statusLabel(doc.status)}
+                    {DOCUMENT_STATUS_LABELS[doc.status]}
                   </span>
                 </td>
                 <td className="px-4 py-3">
@@ -76,7 +68,7 @@ export function DocumentsTable({ documents }: DocumentsTableProps) {
                         : "text-muted-foreground"
                     }
                   >
-                    {visibilityLabel(doc.visibility)}
+                    {DOCUMENT_VISIBILITY_LABELS[doc.visibility]}
                   </span>
                 </td>
                 <td className="text-muted-foreground px-4 py-3 tabular-nums">
@@ -102,6 +94,12 @@ export function DocumentsTable({ documents }: DocumentsTableProps) {
                       className="text-accent hover:underline"
                     >
                       编辑
+                    </Link>
+                    <Link
+                      href={`/admin/documents/${doc.id}/shares`}
+                      className="text-accent hover:underline"
+                    >
+                      分享
                     </Link>
                     <form action={deleteDocumentAction}>
                       <input type="hidden" name="id" value={doc.id} />

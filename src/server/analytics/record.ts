@@ -19,8 +19,9 @@ export type TrackViewInput = {
 };
 
 /**
- * 记录一次文档浏览：写入 view_logs 明细，并把 doc_daily_stats 的
- * 当日 PV +1；若该访客当日在该入口首次出现，UV 同步 +1。
+ * 记录一次文档浏览：写入 view_logs 明细，把 doc_daily_stats 的
+ * 当日 PV +1（该访客当日在该入口首次出现时 UV 同步 +1），并同步
+ * 累加 documents.view_count 与 share_links.view_count 冗余计数。
  *
  * 目标解析与可见性判定复用 documents 模块的 resolveViewTarget；
  * 不可见目标静默丢弃，避免埋点接口成为探测文档存在性的旁路。
@@ -84,6 +85,21 @@ export async function trackView(input: TrackViewInput): Promise<boolean> {
         ...(seenToday === null ? { uv: { increment: 1 } } : {}),
       },
     });
+
+    // ADR-0003 规划的权威写路径是 Redis 计数 + 定时回写，第四期接入
+    // Redis 后补齐；本期在同一事务内同步 increment 冗余计数作为临时
+    // 方案，使阅读端与管理端展示的浏览量立即正确。
+    await tx.document.update({
+      where: { id: target.documentId },
+      data: { viewCount: { increment: 1 } },
+    });
+
+    if (target.shareLinkId !== null) {
+      await tx.shareLink.update({
+        where: { id: target.shareLinkId },
+        data: { viewCount: { increment: 1 } },
+      });
+    }
   });
 
   return true;
