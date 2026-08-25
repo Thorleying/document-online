@@ -1,0 +1,287 @@
+---
+description: 主进程零分析零执行：分析/审查/修改/运维全部派 fable 子代理
+alwaysApply: true
+---
+
+# 主进程只做调度（零分析 · 零审查 · 零修改）
+
+## 一句话原则
+
+**用户消息 → 主进程不思考、不读码、不改库 → 先派 fable 分析 → 再按分析派 fable 执行 → 主进程只简短汇总。**
+
+主进程模型能力弱，**禁止**用主进程替代子代理完成需要「看懂代码 / 下结论 / 动手改」的工作。
+
+---
+
+## 主进程允许 / 禁止（硬边界）
+
+### ✅ 主进程唯一允许
+
+| 动作 | 说明 |
+|------|------|
+| Git 预检 shell | `fetch` / `status` / `diff` / `log`，结果原样贴给子代理 |
+| 调用 `Task(environment: "cloud", ...)` | 派 fable 子代理，同一轮可并行多个 |
+| 简短汇总 | 3～8 条 bullet，转述子代理结论，**不重写**分析/审查/ diff |
+| 元对话 | 「规则在哪」「上次提交 hash」等**不读仓库**的一问一答 |
+
+### ❌ 主进程绝对禁止（含「先自己看一下」）
+
+- **收到用户消息后立即分析**（意图、范围、方案、风险）→ 必须派 **fable 分析子代理**
+- **代码审查**（架构、安全、质量、问题列表）→ 必须派 **fable 审查子代理 ≥2 路**
+- **修改**（写/改/删文件、重构、修 bug）→ 必须派 **fable 执行子代理**
+- **运维执行**（pull、docker、重启 dev、跑测试/build、commit、push）→ 必须派 **fable 执行子代理**
+- 在主进程里用 `Read`/`Grep`/`Explore` **代替子代理**做深度调查（预检 shell 除外）
+- 在主进程里输出「我认为应该…」「问题可能是…」「建议改成…」等**实质结论**
+
+**唯一例外：** 用户本轮原文包含「不要子代理 / 主进程直接做」。
+
+---
+
+## 模型 slug（禁止静默替换）
+
+| 角色 | slug | 何时派 |
+|------|------|--------|
+| **分析** | `claude-fable-5-thinking-xhigh` | **每一轮**有实质任务时，**第一个**派出的子代理 |
+| **审查** | `claude-fable-5-thinking-xhigh` | 分析判定为「审查」后，**≥2 路并行** |
+| **修改 / 运维** | `claude-fable-5-thinking-xhigh` | 分析判定为「修改/部署/运维」后派 |
+
+slug 不可用 → 回复第一行说明，列可用 slug，**不得**换模型静默执行。
+
+子代理对用户可见的**第一句**必须是：`当前是{短名}模型`，例如 `当前是fable模型`。
+
+### 短名对照（仅用于首句展示；`Task` 的 `model:` 字段必须仍写完整 slug）
+
+| 完整 slug | 短名 |
+|-----------|------|
+| `claude-fable-5-thinking-xhigh` | fable |
+| `claude-opus-5-thinking-high-fast` | opus（备用） |
+
+---
+
+## 标准流水线（逐步，不可跳步）
+
+```
+┌─────────────┐
+│ 用户消息     │
+└──────┬──────┘
+       ▼
+┌─────────────────────────────────────┐
+│ [0] 主进程：Git 预检（仅 shell）      │  ← 唯一允许的主进程「动手」
+└──────┬──────────────────────────────┘
+       ▼
+┌─────────────────────────────────────┐
+│ [1] fable 分析子代理 ×1（云端）       │  ← 主进程禁止在此步输出分析
+│     输出：结构化执行计划              │
+└──────┬──────────────────────────────┘
+       ▼
+┌─────────────────────────────────────┐
+│ [2] 执行子代理（云端，按分析计划）     │
+│   · 审查 → fable ×2~4 并行（只读）   │
+│   · 修改/运维 → fable ×1（可拆多路）  │
+└──────┬──────────────────────────────┘
+       ▼
+┌─────────────────────────────────────┐
+│ [3] 主进程：简短汇总（转述，不代写）   │
+└─────────────────────────────────────┘
+```
+
+### 跳步规则
+
+- **禁止跳过 [1]**：即使任务看起来很简单（「改一行」「pull 一下」），也先 fable 分析再派 fable 执行。
+- **禁止跳过 [2]**：主进程不能「分析完自己改」。
+- **[3] 不能膨胀成 [2]**：汇总里不许贴大段审查报告或 diff 说明。
+
+---
+
+## 阶段 [0]：Git 预检（主进程 shell）
+
+非纯闲聊必做，与子代理并行或在其之前完成：
+
+```powershell
+Set-Location "D:\代码\document-online"
+git fetch origin
+git status -sb
+git diff --stat
+git diff --stat origin/main...HEAD
+git log --oneline -10
+```
+
+- 脏文件 → 标「工作区未提交」
+- 与 origin 差异 → 标「分支相对远程」
+- **禁止**主进程根据 diff 内容做解读；解读交给 fable。
+
+---
+
+## 阶段 [1]：fable 分析子代理（必选 · 主进程不得代分析）
+
+**触发：** 用户消息含任一：审查 / review / 改 / 实现 / fix / 部署 / pull / push / docker / 重启 / 看看 / 有什么问题 / 帮我…
+
+```text
+Task(
+  environment: "cloud",
+  model: "claude-fable-5-thinking-xhigh",
+  subagent_type: "explore",
+  description: "分析用户任务",
+  prompt: "<分析模板>"
+)
+```
+
+### 分析子代理必须输出的六段（缺一段视为未完成）
+
+1. **意图分类**：审查 | 修改 | 部署运维 | 混合
+2. **范围**：目录 / 服务（`src/app`、`src/server`、`prisma`、`src/components`）
+3. **代码线索**：要读的路径（须基于搜索，禁止空猜）
+4. **执行计划**：
+   - 审查 → 派几路 fable、各路职责
+   - 修改/运维 → 是否派执行子代理（fable）、是否 pull/docker/重启/commit/push
+5. **风险与前置**：脏工作区、Prisma 迁移、force push、访问控制/认证影响
+6. **下游 slug 表**：列出 [2] 将派的每个 Task（model + description）
+
+### 主进程收到用户消息后的正确 / 错误示范
+
+**❌ 错误（主进程代分析）：**
+> 我理解你要改阅读页，涉及 `src/app/(reader)/`，我建议…
+
+**✅ 正确（主进程只调度）：**
+> 已跑 Git 预检，正在派 fable 分析子代理；分析完成后按 plan 派执行子代理。
+
+---
+
+## 阶段 [2a]：审查 → fable 并行（只读）
+
+分析判定为「审查」时，**同一轮**并行 **≥2 路** fable：
+
+| 路 | subagent_type | 职责 |
+|----|---------------|------|
+| A | `explore` | `src/server/`、`prisma/`、访问控制与领域逻辑 |
+| B | `explore` | `src/app/`、阅读端/管理端路由与 UI |
+| C | `generalPurpose` | 安全、认证、Markdown 净化、测试 |
+| D | `generalPurpose` | docker、Git、部署、Prisma 迁移 |
+
+- 只读；禁止改文件、commit、push
+- 每路 prompt 须含：**[1] 分析摘要** + **Git 预检** + **本路职责**
+
+---
+
+## 阶段 [2b]：修改 / 运维 → fable 执行
+
+分析判定为「修改 / 部署 / 运维」时，派 **fable 执行子代理**（大任务可拆多路，由 [1] 定）：
+
+```text
+Task(
+  environment: "cloud",
+  model: "claude-fable-5-thinking-xhigh",
+  subagent_type: "generalPurpose",
+  description: "<implement | deploy | pull-push>",
+  prompt: "<执行模板>"
+)
+```
+
+**执行子代理（fable）负责（主进程不得代做）：**
+
+- 写 / 改 / 删代码
+- `git pull` / `commit` / `push`
+- `docker compose up -d`（MySQL / Redis）
+- 重启 `npm run dev`、执行 `npm run db:migrate` / `db:seed`
+- 跑 `npm run verify` / `npm run build` 并报告结果
+
+Prompt 必含：[1] 全文或摘要 + 用户原话 + Git 预检 + `.cursor/rules` 与 `AGENTS.md` 复用与最小改动。
+
+---
+
+## 阶段 [3]：主进程汇总（短）
+
+只允许：
+
+1. 派了哪几路、用的 slug
+2. 各子代理 **一句** 结论
+3. 待用户确认项（如有）
+4. 是否还需 Docker / dev 重启（引用子代理结论）
+
+禁止：在主进程重贴审查全文、实现细节、长 diff 说明。
+
+---
+
+## Prompt 模板（复制填实）
+
+### [1] 分析（fable）
+
+```text
+当前是fable模型
+
+你是任务分析子代理。只读，禁止改任何文件。
+
+仓库：D:\代码\document-online
+
+用户原话：
+<paste>
+
+Git 预检（原样）：
+<paste>
+
+请按六段输出：意图 / 范围 / 代码线索 / 执行计划（含将派几个 Task、model slug）/ 风险 / 下游 slug 表。
+中文。第一句：当前是fable模型
+```
+
+### [2a] 审查（fable，每路改职责）
+
+```text
+当前是fable模型
+
+只读审查。禁止改文件、commit、push。
+
+仓库：D:\代码\document-online
+本路职责：<A服务端|B前端|C安全|D部署>
+
+分析子代理结论：
+<paste [1]>
+
+Git 预检：
+<paste>
+
+中文。第一句「当前是fable模型」。只写本职责范围内发现与建议。
+```
+
+### [2b] 执行（fable）
+
+```text
+当前是fable模型
+
+你是执行子代理。在仓库内完成下列任务，遵循 .cursor/rules 与 AGENTS.md。
+
+分析子代理结论：
+<paste [1]>
+
+用户原话：
+<paste>
+
+Git 预检：
+<paste>
+
+任务：<具体要实现或运维步骤>
+
+约束：先搜现有实现；最小 diff；不擅自 force push；改完跑 npm run verify；报告改了哪些文件与跑过的命令。
+中文。第一句「当前是fable模型」。
+```
+
+---
+
+## 意图 → 派单速查
+
+| 用户说 | [1] | [2] |
+|--------|-----|-----|
+| 审查 / review / 有什么问题 | fable ×1 | fable ×2~4 并行 |
+| 改 / 实现 / fix / 重构 | fable ×1 | fable ×1 |
+| pull / docker / 重启 dev / push | fable ×1 | fable ×1 |
+| pull + docker + seed（组合） | fable ×1 | fable ×1（可一条龙） |
+| 纯闲聊 / 规则在哪 | 跳过 [1][2] | 主进程直接短答 |
+
+---
+
+## 部署提醒（写入 [1] 或执行子代理 prompt）
+
+- `prisma/schema.prisma` 或 `prisma/migrations/` 变更 → `npm run db:migrate`（开发）或 `npm run db:deploy`（部署）
+- `docker-compose.yml` 变更 → `docker compose up -d`
+- 仅前端/UI → 重启 `npm run dev` 或确认 HMR
+- 提交前 → `npm run format:check && npm run lint && npm run typecheck && npm test`
+- 工作区干净且与 origin 一致 → 写明「与远程一致」

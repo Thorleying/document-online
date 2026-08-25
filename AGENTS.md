@@ -12,6 +12,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 本文件仅记录本项目特有事实，继承用户全局 `AGENTS.md`、开发规范和架构规范。上方 `nextjs-agent-rules` 托管块由 `next dev` 自动写入，不要删除。
 
+发生冲突时：**用户当前请求 > 本项目 AGENTS.md > `.cursor/rules/` > 全局 AGENTS.md**。
+
+## Cursor 主进程与子代理
+
+主进程调度细则见 [`.cursor/rules/cloud-subagent-delegation.mdc`](.cursor/rules/cloud-subagent-delegation.mdc)（`alwaysApply: true`）。
+
+流水线概要：`[0] Git 预检` → `[1] fable 分析子代理` → `[2] fable 审查/执行子代理` → `[3] 主进程简短汇总`。用户明确说「不要子代理 / 主进程直接做」时可跳过。
+
 ## 项目概览
 
 - 项目用途：在线文档阅读与分享。管理员在后台以 Markdown 撰写文档，通过永久链接或受控分享链接对外发布，并统计浏览量。
