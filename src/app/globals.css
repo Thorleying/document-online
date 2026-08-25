@@ -52,8 +52,10 @@
   --font-sans:
     system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     "Noto Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+  /* 全系统字体栈，禁止第三方字体 CDN。拉丁字形优先 Georgia，
+     中文回落系统宋体，保持 editorial 气质且零外部请求。 */
   --font-display:
-    "Songti SC", "STSong", "SimSun", Georgia, "Times New Roman", serif;
+    Georgia, "Times New Roman", "Songti SC", "STSong", "SimSun", serif;
   --font-serif: var(--font-display);
   --font-mono:
     ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace;

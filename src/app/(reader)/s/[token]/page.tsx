@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Ban, Clock } from "lucide-react";
 import { ReaderShell } from "@/components/reader/reader-shell";
 import { ShareAccessCard } from "@/components/reader/share-access-card";
+import { ViewTracker } from "@/components/reader/view-tracker";
 import { SharePasswordGate } from "@/components/reader/share-password-gate";
 import { getShareAccessView } from "@/server/documents/share";
 
@@ -48,6 +49,7 @@ export default async function ShareReaderPage({
           viewCount={view.doc.viewCount}
           publishedLabel="分享文档"
         >
+          <ViewTracker token={token} />
           <div dangerouslySetInnerHTML={{ __html: view.doc.contentHtml }} />
         </ReaderShell>
       );
