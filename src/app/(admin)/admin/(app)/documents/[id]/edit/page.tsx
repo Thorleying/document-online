@@ -27,12 +27,20 @@ export default async function EditDocumentPage({
         title="编辑文档"
         description={`永久链接 /d/${doc.slug}`}
         actions={
-          <Link
-            href={`/admin/documents/${doc.id}/shares`}
-            className="border-border bg-card hover:bg-muted inline-flex rounded-lg border px-4 py-2 text-sm font-medium transition-colors"
-          >
-            分享链接
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href={`/admin/documents/${doc.id}/stats`}
+              className="border-border bg-card hover:bg-muted inline-flex rounded-lg border px-4 py-2 text-sm font-medium transition-colors"
+            >
+              数据统计
+            </Link>
+            <Link
+              href={`/admin/documents/${doc.id}/shares`}
+              className="border-border bg-card hover:bg-muted inline-flex rounded-lg border px-4 py-2 text-sm font-medium transition-colors"
+            >
+              分享链接
+            </Link>
+          </div>
         }
       />
       <div className="flex-1 overflow-y-auto p-6">

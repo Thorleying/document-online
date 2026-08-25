@@ -19,6 +19,25 @@ export type RefererStat = {
   count: number;
 };
 
+/** 单个入口渠道（永久链接或某条分享链接）在统计窗口内的 PV/UV 汇总。 */
+export type ChannelStat = {
+  /** doc_daily_stats.share_link_id 的字符串形式，"0" 表示永久链接入口。 */
+  shareLinkId: string;
+  entry: "permanent" | "share";
+  /** 分享链接备注；永久链接入口或链接已被删除时为 null。 */
+  remark: string | null;
+  /** 分享链接 token；永久链接入口或链接已被删除时为 null。 */
+  token: string | null;
+  pv: number;
+  uv: number;
+};
+
+/** 单文档分渠道统计：窗口内整体日趋势（已补零）与各渠道汇总。 */
+export type DocumentChannelStats = {
+  trend: DailyTrendPoint[];
+  channels: ChannelStat[];
+};
+
 /** 最近访问明细项，字段均已序列化为可跨越到客户端的原始类型。 */
 export type RecentViewItem = {
   id: string;
