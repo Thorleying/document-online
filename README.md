@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# document-online
 
-## Getting Started
+在线文档阅读与分享平台。管理员在后台以 Markdown 撰写文档，通过永久链接或受控分享链接对外发布。
 
-First, run the development server:
+## 前置条件
+
+- Node.js >= 20.9
+- Docker（本地 MySQL 8 + Redis 7）
+
+## 首次启动
 
 ```bash
+# 1. 依赖
+npm install
+npm run db:generate
+
+# 2. 环境变量（复制后按需改端口/密钥）
+cp .env.example .env
+# Windows 务必确认 DATABASE_URL 使用 127.0.0.1，不要用 localhost
+
+# 3. 基础设施
+docker compose up -d
+
+# 4. 数据库
+npm run db:deploy
+npm run db:seed
+
+# 5. 确认数据库连通（dev 报 pool timeout 时先跑这步）
+npm run db:ping
+
+# 6. 开发
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+打开 [http://localhost:3000](http://localhost:3000)。管理后台：[http://localhost:3000/admin/login](http://localhost:3000/admin/login)（seed 默认账号见 `prisma/seed.ts`）。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 常见错误
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### `pool timeout: failed to retrieve a connection from pool`
 
-## Learn More
+MySQL 未启动或 `DATABASE_URL` 不可达。按顺序检查：
 
-To learn more about Next.js, take a look at the following resources:
+1. `docker compose ps` — mysql 容器是否为 healthy
+2. `.env` 中 `DATABASE_URL` 端口是否与 `MYSQL_PORT` 一致
+3. **Windows**：连接串主机用 `127.0.0.1`，不要用 `localhost`
+4. `npm run db:ping` — 通过后再 `npm run dev`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 门禁命令
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| 命令 | 说明 |
+|------|------|
+| `npm run verify` | format + lint + typecheck + test（**不**连库） |
+| `npm run db:ping` | 探测 MySQL 连通性 |
+| `npm run verify:full` | verify + db:ping + build（提交前推荐） |
 
-## Deploy on Vercel
+`npm run dev` 会自动执行 `predev` → `db:ping`，数据库未就绪时会提前给出上述提示，而不是 Prisma pool timeout。
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 更多信息
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+工程约定见 [AGENTS.md](./AGENTS.md)。

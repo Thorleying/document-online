@@ -10,6 +10,9 @@ import {
   listPublicDocumentCards,
 } from "@/server/documents/public-list";
 
+/** 首页依赖实时文档列表，禁止构建期静态预渲染（否则 build 必须连库且内容会冻结）。 */
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const [documents, stats] = await Promise.all([
     listPublicDocumentCards(6),
