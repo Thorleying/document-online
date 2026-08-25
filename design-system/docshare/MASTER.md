@@ -39,15 +39,20 @@
 
 ### Typography
 
-- **Heading Font:** Cormorant
-- **Body Font:** Montserrat
-- **Mood:** luxury, high-end, fashion, elegant, refined, premium
-- **Google Fonts:** [Cormorant + Montserrat](https://fonts.googleapis.com/css2?family=Cormorant:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap)
+> **禁止加载 Google Fonts、`next/font/google` 或任何第三方字体 CDN。**
+> 全站只使用操作系统自带字体，token 定义以 `src/app/globals.css` 为唯一权威来源。
 
-**CSS Import:**
-```css
-@import url('https://fonts.googleapis.com/css2?family=Cormorant:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap');
-```
+- **Mood:** editorial, refined, premium — 通过排版层级、留白与系统衬线体现，而非外部字体
+- **Display/Heading（`--font-display` / `--font-serif`）:** 系统衬线栈
+  `Georgia, "Times New Roman", "Songti SC", "STSong", "SimSun", serif`
+- **Body（`--font-sans`）:** 系统无衬线栈
+  `system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Microsoft YaHei", sans-serif`
+- **Code（`--font-mono`）:** `ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace`
+
+**使用规则：**
+
+- 组件中通过 Tailwind 的 `font-sans` / `font-serif` / `font-display` / `font-mono` 工具类引用 token，禁止硬编码字体族。
+- 禁止新增 `@import url(...)`、`<link rel="stylesheet" href="https://fonts...">` 或 `@font-face` 指向外部 URL 的写法。
 
 ### Spacing Variables
 
