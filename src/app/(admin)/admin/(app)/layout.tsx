@@ -8,9 +8,9 @@ export default async function AdminAppLayout({
   const session = await verifySession();
 
   return (
-    <div className="bg-admin-canvas flex h-screen overflow-hidden">
+    <div className="bg-admin-canvas flex h-dvh flex-col overflow-hidden lg:flex-row">
       <AdminSidebar username={session.username} logoutAction={logoutAction} />
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {children}
       </div>
     </div>
