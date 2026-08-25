@@ -34,8 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
-# 编辑器专属的 skills 副本。Prisma 会把同一份 skills 装到 .agents、.claude 和
-# .windsurf 三处，仓库只保留 .agents 这一份厂商中立的副本。
+# Agent skills 仅装全局（~/.agents/skills/），勿提交项目内副本。
+# 安装：npx skills add <owner/repo> --agent cursor -g
+.agents/
 .claude/
 .windsurf/
 

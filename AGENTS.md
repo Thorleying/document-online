@@ -20,6 +20,17 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 流水线概要：`[0] Git 预检` → `[1] fable 分析子代理` → `[2] fable 审查/执行子代理` → `[3] 主进程简短汇总`。用户明确说「不要子代理 / 主进程直接做」时可跳过。
 
+## Agent Skills（全局）
+
+Skills **不放在本仓库**，统一安装到用户目录 `~/.agents/skills/`（Cursor 全局加载）。
+
+```powershell
+npx skills add anthropics/skills --agent cursor -g
+npx skills add nextlevelbuilder/ui-ux-pro-max-skill --agent cursor -g
+npx skills add prisma/skills --agent cursor -g
+npx skills ls -g -a cursor
+```
+
 ## 项目概览
 
 - 项目用途：在线文档阅读与分享。管理员在后台以 Markdown 撰写文档，通过永久链接或受控分享链接对外发布，并统计浏览量。
