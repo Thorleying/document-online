@@ -1,0 +1,247 @@
+// 在线文档阅读与分享 —— 数据模型
+//
+// 本文件是数据模型的唯一权威来源。业务代码中的状态、角色和可见性一律从
+// 生成的枚举导入，禁止写裸字符串。设计背景见 docs/specs/0001-online-document-sharing.md。
+//
+// MySQL 相关约定：
+// - 数据库字符集必须是 utf8mb4 / utf8mb4_0900_ai_ci，由 docker-compose.yml 设定。
+//   默认的 3 字节 utf8 会导致标题中的 emoji 写入失败。
+// - 表名和列名统一 snake_case，通过 @map / @@map 映射。
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+/// 管理员账号。当前按单管理员运营，但保留 role 与多行记录的能力，
+/// 将来增加协作者时无需改表结构。
+model User {
+  id           BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  username     String     @unique @db.VarChar(50)
+  /// bcrypt 哈希。任何情况下都不得存储明文或可逆加密的密码。
+  passwordHash String     @map("password_hash") @db.VarChar(100)
+  role         UserRole   @default(ADMIN)
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  documents Document[]
+
+  @@map("users")
+}
+
+/// 文档分类。一篇文档最多属于一个分类，用于后台筛选，不影响对外访问控制。
+model Category {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name      String   @db.VarChar(50)
+  slug      String   @unique @db.VarChar(60)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  documents Document[]
+
+  @@map("categories")
+}
+
+/// 文档标签。与分类的区别是多对多，且不参与排序。
+model Tag {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name      String   @db.VarChar(50)
+  slug      String   @unique @db.VarChar(60)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  documents DocumentTag[]
+
+  @@map("tags")
+}
+
+model DocumentTag {
+  documentId BigInt @map("document_id") @db.UnsignedBigInt
+  tagId      BigInt @map("tag_id") @db.UnsignedBigInt
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, tagId])
+  @@index([tagId])
+  @@map("document_tags")
+}
+
+/// 文档正文与元信息。
+///
+/// 对外可访问的充要条件是：status = PUBLISHED 且 deletedAt 为空，并且满足以下之一：
+/// - visibility = PUBLIC（可经 /d/{slug} 直接访问）
+/// - 持有一条有效的分享链接（可经 /s/{token} 访问）
+///
+/// 判定逻辑的唯一权威实现在 src/server/documents/access.ts，
+/// 页面与路由不得自行拼装该判断。
+model Document {
+  id      BigInt  @id @default(autoincrement()) @db.UnsignedBigInt
+  title   String  @db.VarChar(200)
+  /// 永久链接 /d/{slug} 的路径片段。全局唯一。
+  slug    String  @unique @db.VarChar(180)
+  summary String? @db.VarChar(500)
+
+  coverUrl String? @map("cover_url") @db.VarChar(500)
+
+  /// Markdown 源文本，是内容的权威版本。
+  contentMd   String @map("content_md") @db.MediumText
+  /// 由 contentMd 经服务端净化管线渲染而来的 HTML，保存时生成。
+  /// 阅读页直接读取本字段，请求路径上不解析 Markdown。
+  /// 该字段的内容已经过 rehype-sanitize，但仍不得在客户端拼接后重新注入。
+  contentHtml String @map("content_html") @db.MediumText
+
+  categoryId BigInt? @map("category_id") @db.UnsignedBigInt
+  authorId   BigInt  @map("author_id") @db.UnsignedBigInt
+
+  status     DocumentStatus     @default(DRAFT)
+  visibility DocumentVisibility @default(PRIVATE)
+
+  /// 是否允许搜索引擎索引。仅当 visibility = PUBLIC 且 status = PUBLISHED 时
+  /// 才允许为 true，其余情况一律输出 noindex。约束由应用层保证。
+  allowIndex Boolean @default(false) @map("allow_index")
+
+  /// 冗余计数，读多写少，允许最多一个回写周期（默认一分钟）的延迟。
+  /// 权威增量来自 Redis，明细可从 view_logs 重建。见 docs/adr/0003。
+  viewCount Int @default(0) @map("view_count")
+  uvCount   Int @default(0) @map("uv_count")
+
+  publishedAt DateTime? @map("published_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  /// 软删除标记。非空即视为不存在，所有对外入口立即失效。
+  deletedAt   DateTime? @map("deleted_at")
+
+  author     User          @relation(fields: [authorId], references: [id])
+  category   Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags       DocumentTag[]
+  shareLinks ShareLink[]
+  viewLogs   ViewLog[]
+
+  @@index([status, publishedAt])
+  @@index([viewCount])
+  @@index([deletedAt])
+  @@map("documents")
+}
+
+/// 分享链接。一个文档可以有多条，分别对应不同的分享渠道。
+///
+/// 注意：当所属文档的 visibility = PUBLIC 时，本表的 password 与 expiresAt
+/// 不具备实际约束力，因为访问者可以直接走永久链接。这是有意的取舍，
+/// 理由与配套的界面警告要求见 docs/adr/0002-dual-entry-access-control.md。
+model ShareLink {
+  id         BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  documentId BigInt @map("document_id") @db.UnsignedBigInt
+
+  /// nanoid(22) 生成的不可枚举 token。禁止改用自增 ID 或其他可预测值，
+  /// 否则可以通过遍历发现全部私密文档。
+  token String @unique @db.VarChar(32)
+
+  /// 面向管理员的备注，用于回答"这条链接是发给谁的"。
+  remark String? @db.VarChar(100)
+
+  /// bcrypt 哈希，为空表示该链接不需要密码。
+  passwordHash String? @map("password_hash") @db.VarChar(100)
+
+  /// 为空表示永不过期。
+  expiresAt DateTime? @map("expires_at")
+
+  viewCount Int     @default(0) @map("view_count")
+  /// 停用后立即失效，与过期区分展示，便于读者理解发生了什么。
+  enabled   Boolean @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  document Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  viewLogs ViewLog[]
+
+  @@index([documentId])
+  @@map("share_links")
+}
+
+/// 单次访问明细。含 IP 与 UA，属于个人信息，保留 90 天后由定时任务清理。
+/// 图表一律查 doc_daily_stats，不要在本表上做 GROUP BY——它会增长到百万行级。
+model ViewLog {
+  id         BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  documentId BigInt @map("document_id") @db.UnsignedBigInt
+
+  /// 为空表示访问来自永久链接 /d/{slug}。
+  /// 注意本字段与 doc_daily_stats.share_link_id 的表示方式不同，
+  /// 后者受 MySQL 主键非空约束改用 0，转换由聚合任务负责。
+  shareLinkId BigInt? @map("share_link_id") @db.UnsignedBigInt
+
+  /// 匿名访客标识，来自浏览器 localStorage，用于 UV 去重。
+  visitorId String @map("visitor_id") @db.VarChar(64)
+
+  /// 最长 45 字符可容纳 IPv6 文本表示。
+  ip         String? @db.VarChar(45)
+  ua         String? @db.VarChar(500)
+  referer    String? @db.VarChar(500)
+  deviceType String? @map("device_type") @db.VarChar(20)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  document  Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  shareLink ShareLink? @relation(fields: [shareLinkId], references: [id], onDelete: SetNull)
+
+  @@index([documentId, createdAt])
+  @@index([createdAt])
+  @@map("view_logs")
+}
+
+/// 按天预聚合的浏览统计，是所有图表的数据来源。
+///
+/// shareLinkId 用 0 表示永久链接入口，而不是 NULL。原因是本表用
+/// (documentId, shareLinkId, statDate) 作复合主键，而 MySQL 主键列不允许为空；
+/// 若改用唯一索引，MySQL 会把每个 NULL 视为互不相同，从而无法阻止重复行。
+/// 该常量在 src/server/analytics 中有具名定义，业务代码不得直接写字面量 0。
+/// 因为 0 不对应真实的 share_links 行，本表刻意不建外键。
+model DocDailyStat {
+  documentId  BigInt   @map("document_id") @db.UnsignedBigInt
+  shareLinkId BigInt   @default(0) @map("share_link_id") @db.UnsignedBigInt
+  statDate    DateTime @map("stat_date") @db.Date
+
+  pv Int @default(0)
+  uv Int @default(0)
+
+  @@id([documentId, shareLinkId, statDate])
+  @@index([statDate])
+  @@map("doc_daily_stats")
+}
+
+enum UserRole {
+  ADMIN
+  EDITOR
+  VIEWER
+
+  @@map("user_role")
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+
+  @@map("user_status")
+}
+
+enum DocumentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+
+  @@map("document_status")
+}
+
+enum DocumentVisibility {
+  /// 永久链接 /d/{slug} 返回 404，只能通过分享链接访问。
+  PRIVATE
+  /// 永久链接任何人可访问，分享链接退化为渠道标记。
+  PUBLIC
+
+  @@map("document_visibility")
+}
