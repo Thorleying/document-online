@@ -1,11 +1,11 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { CircleAlert, Eye, EyeOff } from "lucide-react";
+import { CircleAlert, Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { loginAction, type LoginFormState } from "@/server/auth/actions";
 
 const inputClass =
-  "w-full rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm outline-none transition-colors duration-200 focus:border-accent focus:ring-2 focus:ring-accent/25";
+  "w-full rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors duration-200 focus:border-ring focus:ring-2 focus:ring-ring/25 aria-invalid:border-danger aria-invalid:ring-2 aria-invalid:ring-danger/15";
 
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) {
@@ -88,7 +88,7 @@ export function LoginForm() {
             type="button"
             onClick={() => setVisible((v) => !v)}
             aria-label={visible ? "隐藏密码" : "显示密码"}
-            className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-0 flex w-11 cursor-pointer items-center justify-center transition-colors duration-200"
+            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/40 absolute inset-y-0 right-0 flex w-11 cursor-pointer items-center justify-center rounded-r-lg transition-colors duration-200 outline-none focus-visible:ring-2"
           >
             {visible ? (
               <EyeOff className="h-4 w-4" aria-hidden />
@@ -103,9 +103,16 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={pending}
-        className="bg-primary text-primary-foreground hover:bg-primary/90 min-h-11 w-full cursor-pointer rounded-lg px-4 text-sm font-medium transition-colors duration-200 disabled:cursor-default disabled:opacity-60"
+        className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring/50 inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-60"
       >
-        {pending ? "登录中…" : "登录"}
+        {pending ? (
+          <>
+            <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+            登录中…
+          </>
+        ) : (
+          "登录"
+        )}
       </button>
     </form>
   );
