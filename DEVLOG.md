@@ -7,6 +7,39 @@
 | 任务 | 日期 | 状态 | 详细日志 |
 |---|---|---|---|
 | 项目初始化与一期骨架 | 2026-08-25 | DONE | 见下方 |
+| PR #1：登录/分享/后台布局 UI 重设计 | 2026-08-25 | DONE | 见下方 |
+| PR #2：db:ping、verify:full 与连库修复 | 2026-08-25 | DONE | 见下方 |
+| PR #3：登录优化、访问统计与分享链接管理 | 2026-08-25 | DONE | 见下方 |
+| Phase 0：enum 中文标签统一与分享入口 | 2026-08-25 | DONE | 见下方 |
+
+---
+
+## 2026-08-25 - 已合并 PR 摘要（#1–#3）
+
+- PR #1 `feat(reader,admin)`：登录页与后台响应式布局重设计（主题色不变）；新建 `s/[token]` 分享详情页，覆盖密码门/已过期/已停用/404 四态，密码校验走 server action + JWT 凭证 cookie（httpOnly/lax，path 限定 `/s/{token}`）；补品牌 404 与 `reader-prose` 阅读排版。
+- PR #2 `fix(infra)`：新增 `scripts/db-ping.ts` 与 `npm run db:ping`，`predev` 自动检查数据库连通；新增 `npm run verify:full`（verify + db:ping + build）；`.env.example` 的 `DATABASE_URL` 改用 `127.0.0.1`；首页 `force-dynamic` 使 build 不再依赖运行中 MySQL。
+- PR #3 `feat(admin,analytics)`：新增 `src/server/analytics/` 与 `POST /api/view` 埋点、阅读页 `ViewTracker`；新增 `/admin/stats` 统计页（每日 PV/UV、来源分布、最近访问明细）；新增 `/admin/documents/[id]/shares` 分享链接管理（创建/编辑/启停、密码、过期时间、备注、复制链接）。
+
+上述能力落地后，一期日志中「分享链接、浏览量埋点、统计图表留待后续迭代」的说法已过时，详见下方标注。
+
+---
+
+## 2026-08-25 - Phase 0：enum 中文标签统一与分享入口
+
+- 状态：DONE
+- 风险等级：L1（纯展示层重构与文档更新，不涉及认证、访问控制、Schema）
+- 基线：`main` @ `16e696b`（PR #3 合并后）
+
+### 目标与实现
+
+1. 新建 `src/lib/document-labels.ts`：`DocumentStatus`、`DocumentVisibility`、`UserRole` 的中文标签映射，作为全站展示标签的单一来源。
+2. `document-form.tsx` 状态/可见性下拉框由裸 enum 值改为中文标签；`documents-table.tsx` 与后台概览页删除各自重复的 `statusLabel`/`visibilityLabel`，统一引用共享映射。
+3. `documents-table.tsx` 操作列新增「分享」快捷链接，指向 `/admin/documents/[id]/shares`。
+4. 本文件补录 PR #1–#3 摘要，修正过时描述。
+
+### 验证记录
+
+- `npm run verify`（format:check + lint + typecheck + test）：PASS，见提交信息。
 
 ---
 
@@ -37,9 +70,11 @@
 
 ### 非目标
 
-- 阅读端完整排版与主题切换（第二期）。
-- 分享链接的密码校验与过期拦截页面（第三期）。
-- 浏览量埋点、Redis 计数与统计图表（第四期）。
+> 2026-08-25 标注：下列前三项已随后续 PR 部分或全部落地——阅读排版与分享详情页（含密码校验、过期/停用拦截）见 PR #1，浏览量埋点与基础统计页见 PR #3；Redis 计数与限流仍未接入。
+
+- 阅读端完整排版与主题切换（第二期）。（排版已在 PR #1 完成，主题切换未做）
+- 分享链接的密码校验与过期拦截页面（第三期）。（已在 PR #1 完成）
+- 浏览量埋点、Redis 计数与统计图表（第四期）。（埋点与基础统计已在 PR #3 完成，Redis 计数未接入）
 - 图片上传、分类标签、批量操作（第五期）。
 - CI 流水线、生产部署、域名与证书。
 
@@ -132,4 +167,5 @@
 ### 完成摘要
 
 - 完成时间：2026-08-25 18:02:30 +08:00
-- 交付结论：项目初始化与一期核心能力（认证 + 文档 CRUD + 永久链接阅读 + 工程门禁）已落地，可本地 `docker compose up -d && npm run dev` 开发。分享链接、浏览量埋点、统计图表留待后续迭代。
+- 交付结论：项目初始化与一期核心能力（认证 + 文档 CRUD + 永久链接阅读 + 工程门禁）已落地，可本地 `docker compose up -d && npm run dev` 开发。
+- 2026-08-25 更新：原文「分享链接、浏览量埋点、统计图表留待后续迭代」已过时——分享详情页与分享链接管理（PR #1、#3）、浏览量埋点与基础统计页（PR #3）均已交付；仍待后续的是 Redis 计数与限流、主题切换、图片上传等。
