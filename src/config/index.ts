@@ -33,6 +33,10 @@ export const config = {
   shareAccessCookiePrefix: "share_access_" as const,
   /** 分享链接密码验证凭证有效期（秒），到期需重新输入密码。 */
   shareAccessMaxAgeSec: 24 * 60 * 60,
+  /** /api/view 匿名埋点的 IP 限流窗口（秒）。Redis 版限流在第四期替换。 */
+  viewRateLimitWindowSec: 60,
+  /** /api/view 单 IP 在窗口内允许的最大请求数。 */
+  viewRateLimitMax: 30,
 } as const;
 
 export type AppConfig = typeof config;

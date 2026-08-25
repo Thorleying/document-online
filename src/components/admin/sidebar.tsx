@@ -3,12 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FileText, LayoutDashboard, LogOut, Menu, X } from "lucide-react";
+import {
+  BarChart3,
+  FileText,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const navItems = [
   { href: "/admin", label: "概览", icon: LayoutDashboard, exact: true },
   { href: "/admin/documents", label: "文档管理", icon: FileText, exact: false },
+  { href: "/admin/stats", label: "数据统计", icon: BarChart3, exact: false },
 ];
 
 type AdminSidebarProps = {
