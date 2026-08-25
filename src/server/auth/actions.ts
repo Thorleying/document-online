@@ -48,7 +48,7 @@ export async function loginAction(
   }
 
   await createSession(user.id.toString());
-  redirect("/admin/documents");
+  redirect("/admin");
 }
 
 /** 登出并清除会话。 */

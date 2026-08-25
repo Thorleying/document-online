@@ -31,11 +31,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isLoggedIn && pathname === `${ADMIN_PREFIX}/login`) {
-    return NextResponse.redirect(new URL("/admin/documents", request.url));
-  }
-
-  if (pathname === ADMIN_PREFIX || pathname === `${ADMIN_PREFIX}/`) {
-    return NextResponse.redirect(new URL("/admin/documents", request.url));
+    return NextResponse.redirect(new URL("/admin", request.url));
   }
 
   return NextResponse.next();

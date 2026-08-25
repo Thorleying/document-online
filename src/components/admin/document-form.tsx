@@ -1,12 +1,12 @@
 "use client";
 
 import { useActionState } from "react";
-import {
-  DocumentStatus,
-  DocumentVisibility,
-} from "@/generated/prisma/enums";
+import { DocumentStatus, DocumentVisibility } from "@/generated/prisma/enums";
 import type { DocumentEditorDto } from "@/server/documents/dto";
 import type { DocumentFormState } from "@/server/documents/actions";
+
+const fieldClass =
+  "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/20";
 
 type FieldsProps = {
   initial?: DocumentEditorDto;
@@ -17,7 +17,7 @@ function DocumentMetaFields({ initial, errors }: FieldsProps) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="sm:col-span-2">
-        <label htmlFor="title" className="mb-1 block text-sm font-medium">
+        <label htmlFor="title" className="mb-1.5 block text-sm font-medium">
           标题
         </label>
         <input
@@ -25,7 +25,7 @@ function DocumentMetaFields({ initial, errors }: FieldsProps) {
           name="title"
           defaultValue={initial?.title ?? ""}
           required
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+          className={fieldClass}
         />
         {errors?.title?.[0] ? (
           <p className="mt-1 text-xs text-red-600">{errors.title[0]}</p>
@@ -33,7 +33,7 @@ function DocumentMetaFields({ initial, errors }: FieldsProps) {
       </div>
 
       <div>
-        <label htmlFor="slug" className="mb-1 block text-sm font-medium">
+        <label htmlFor="slug" className="mb-1.5 block text-sm font-medium">
           Slug（永久链接）
         </label>
         <input
@@ -41,7 +41,7 @@ function DocumentMetaFields({ initial, errors }: FieldsProps) {
           name="slug"
           defaultValue={initial?.slug ?? ""}
           placeholder="my-document"
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 font-mono text-sm"
+          className={`${fieldClass} font-mono`}
         />
         {errors?.slug?.[0] ? (
           <p className="mt-1 text-xs text-red-600">{errors.slug[0]}</p>
@@ -49,14 +49,14 @@ function DocumentMetaFields({ initial, errors }: FieldsProps) {
       </div>
 
       <div>
-        <label htmlFor="status" className="mb-1 block text-sm font-medium">
+        <label htmlFor="status" className="mb-1.5 block text-sm font-medium">
           状态
         </label>
         <select
           id="status"
           name="status"
           defaultValue={initial?.status ?? DocumentStatus.DRAFT}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+          className={fieldClass}
         >
           {Object.values(DocumentStatus).map((s) => (
             <option key={s} value={s}>
@@ -67,14 +67,17 @@ function DocumentMetaFields({ initial, errors }: FieldsProps) {
       </div>
 
       <div>
-        <label htmlFor="visibility" className="mb-1 block text-sm font-medium">
+        <label
+          htmlFor="visibility"
+          className="mb-1.5 block text-sm font-medium"
+        >
           可见性
         </label>
         <select
           id="visibility"
           name="visibility"
           defaultValue={initial?.visibility ?? DocumentVisibility.PRIVATE}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+          className={fieldClass}
         >
           {Object.values(DocumentVisibility).map((v) => (
             <option key={v} value={v}>
@@ -90,9 +93,9 @@ function DocumentMetaFields({ initial, errors }: FieldsProps) {
           name="allowIndex"
           type="checkbox"
           defaultChecked={initial?.allowIndex ?? false}
-          className="h-4 w-4 rounded border-zinc-300"
+          className="border-border text-accent focus:ring-accent h-4 w-4 rounded"
         />
-        <label htmlFor="allowIndex" className="text-sm">
+        <label htmlFor="allowIndex" className="text-muted-foreground text-sm">
           允许搜索引擎索引（仅 PUBLIC + 已发布生效）
         </label>
       </div>
@@ -104,7 +107,7 @@ function DocumentBodyFields({ initial, errors }: FieldsProps) {
   return (
     <>
       <div>
-        <label htmlFor="summary" className="mb-1 block text-sm font-medium">
+        <label htmlFor="summary" className="mb-1.5 block text-sm font-medium">
           摘要
         </label>
         <textarea
@@ -112,12 +115,12 @@ function DocumentBodyFields({ initial, errors }: FieldsProps) {
           name="summary"
           rows={2}
           defaultValue={initial?.summary ?? ""}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+          className={fieldClass}
         />
       </div>
 
       <div>
-        <label htmlFor="contentMd" className="mb-1 block text-sm font-medium">
+        <label htmlFor="contentMd" className="mb-1.5 block text-sm font-medium">
           Markdown 正文
         </label>
         <textarea
@@ -126,7 +129,7 @@ function DocumentBodyFields({ initial, errors }: FieldsProps) {
           rows={20}
           required
           defaultValue={initial?.contentMd ?? ""}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 font-mono text-sm leading-relaxed"
+          className={`${fieldClass} font-mono leading-relaxed`}
         />
         {errors?.contentMd?.[0] ? (
           <p className="mt-1 text-xs text-red-600">{errors.contentMd[0]}</p>
@@ -160,7 +163,7 @@ export function DocumentForm({
       {initial ? <input type="hidden" name="id" value={initial.id} /> : null}
 
       {state?.message ? (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
           {state.message}
         </p>
       ) : null}
@@ -171,7 +174,7 @@ export function DocumentForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60"
+        className="bg-primary text-primary-foreground rounded-lg px-5 py-2.5 text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-60"
       >
         {pending ? "保存中…" : submitLabel}
       </button>

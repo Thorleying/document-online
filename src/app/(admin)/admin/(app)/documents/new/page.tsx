@@ -1,22 +1,26 @@
 import Link from "next/link";
+import { AdminHeader } from "@/components/admin/admin-header";
 import { DocumentForm } from "@/components/admin/document-form";
 import { createDocumentAction } from "@/server/documents/actions";
 
 export default function NewDocumentPage() {
   return (
-    <div>
-      <div className="mb-6">
+    <>
+      <AdminHeader
+        title="新建文档"
+        description="撰写 Markdown 并设置发布策略"
+      />
+      <div className="flex-1 overflow-y-auto p-6">
         <Link
           href="/admin/documents"
-          className="text-sm text-zinc-500 hover:text-zinc-800"
+          className="text-muted-foreground hover:text-accent text-sm"
         >
           ← 返回列表
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold text-zinc-900">新建文档</h1>
+        <div className="border-border bg-card mt-4 rounded-xl border p-6 shadow-sm">
+          <DocumentForm action={createDocumentAction} submitLabel="创建文档" />
+        </div>
       </div>
-      <div className="rounded-lg border border-zinc-200 bg-white p-6">
-        <DocumentForm action={createDocumentAction} submitLabel="创建文档" />
-      </div>
-    </div>
+    </>
   );
 }

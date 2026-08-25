@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AdminHeader } from "@/components/admin/admin-header";
 import { DocumentForm } from "@/components/admin/document-form";
 import { updateDocumentAction } from "@/server/documents/actions";
 import { getDocumentForEdit } from "@/server/documents/service";
@@ -21,24 +22,23 @@ export default async function EditDocumentPage({
   }
 
   return (
-    <div>
-      <div className="mb-6">
+    <>
+      <AdminHeader title="编辑文档" description={`永久链接 /d/${doc.slug}`} />
+      <div className="flex-1 overflow-y-auto p-6">
         <Link
           href="/admin/documents"
-          className="text-sm text-zinc-500 hover:text-zinc-800"
+          className="text-muted-foreground hover:text-accent text-sm"
         >
           ← 返回列表
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold text-zinc-900">编辑文档</h1>
-        <p className="mt-1 font-mono text-xs text-zinc-400">/d/{doc.slug}</p>
+        <div className="border-border bg-card mt-4 rounded-xl border p-6 shadow-sm">
+          <DocumentForm
+            initial={doc}
+            action={updateDocumentAction}
+            submitLabel="保存更改"
+          />
+        </div>
       </div>
-      <div className="rounded-lg border border-zinc-200 bg-white p-6">
-        <DocumentForm
-          initial={doc}
-          action={updateDocumentAction}
-          submitLabel="保存更改"
-        />
-      </div>
-    </div>
+    </>
   );
 }
